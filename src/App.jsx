@@ -1,35 +1,92 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AppProvider } from './contexts/AppContext';
+import AuthForm from './components/auth/AuthForm';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import Dashboard from './components/dashboard/Dashboard';
+import SearchPage from './components/search/SearchPage';
+import QATab from './components/qa/QATab';
+import DocumentEditor from './components/documents/DocumentEditor';
 
-function App() {
-  const [count, setCount] = useState(0)
+function AppContent() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [authMode, setAuthMode] = useState('login');
+  const [editingDocument, setEditingDocument] = useState(null);
+
+  if (!user) {
+    return (
+      <AuthForm 
+        mode={authMode} 
+        onToggleMode={() => setAuthMode(mode => mode === 'login' ? 'register' : 'login')} 
+      />
+    );
+  }
+
+  const handleEditDocument = (doc) => {
+    setEditingDocument(doc);
+    setActiveTab('editor');
+  };
+
+  const handleCreateNew = () => {
+    setEditingDocument(null);
+    setActiveTab('editor');
+  };
+
+  const handleSaveDocument = () => {
+    setEditingDocument(null);
+    setActiveTab('dashboard');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDocument(null);
+    setActiveTab('dashboard');
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard onCreateNew={handleCreateNew} onEditDocument={handleEditDocument} />;
+      case 'search':
+        return <SearchPage onEditDocument={handleEditDocument} />;
+      case 'qa':
+        return <QATab />;
+      case 'create':
+        handleCreateNew();
+        return null;
+      case 'editor':
+        return (
+          <DocumentEditor
+            document={editingDocument}
+            onSave={handleSaveDocument}
+            onCancel={handleCancelEdit}
+          />
+        );
+      default:
+        return <Dashboard onCreateNew={handleCreateNew} onEditDocument={handleEditDocument} />;
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Header />
+      <div className="flex">
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <main className="flex-1">
+          {renderContent()}
+        </main>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </AuthProvider>
+  );
+}
